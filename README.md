@@ -1,17 +1,25 @@
-# practica_10_integracion
+# Práctica 10 - Notificaciones y Proyecto Móvil Integrador
 
-A new Flutter project.
+## 📋 Datos Generales
+- **Institución:** Instituto Tecnológico Superior de Calkiní
+- **Carrera:** Ingeniería en Sistemas Computacionales
+- **Asignatura:** Tópicos de Programación Móvil
+- **Maestra:** Ruth Betsaida Martínez Domínguez
+- **Equipo:** EQ. 6
+- **Semestre:** 7
+- **Grupo:** A
 
-## Getting Started
+## 🎯 Objetivo
+Integrar las competencias del curso en una aplicación móvil funcional y configurar notificaciones locales como base conceptual para alertas al usuario.
 
-This project is a starting point for a Flutter application.
+## 🛠️ Requisitos
+- Flutter SDK 3.47.2+
+- Visual Studio Code
+- Paquetes: flutter_local_notifications, sqflite, image_picker, geolocator, http, intl
+- Permisos de cámara, GPS y notificaciones en Android
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## 📦 Instalación
+```bash
+git clone https://github.com/FernandoJesus9033/practica_10_integracion.git
+cd practica_10_integracion
+flutter pub get
