@@ -3,14 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
-import '../models/reporte.dart';
+import '../models/libro.dart';
 import '../services/db_service.dart';
 import '../services/notificaciones_service.dart';
 import 'lista_screen.dart';
 
 class InicioScreen extends StatefulWidget {
   const InicioScreen({super.key});
-
   @override
   State<InicioScreen> createState() => _InicioScreenState();
 }
@@ -18,8 +17,8 @@ class InicioScreen extends StatefulWidget {
 class _InicioScreenState extends State<InicioScreen> {
   final formKey = GlobalKey<FormState>();
   final tituloCtrl = TextEditingController();
-  final descCtrl = TextEditingController();
-  String categoria = 'Mantenimiento';
+  final autorCtrl = TextEditingController();
+  String categoria = 'Novela';
   XFile? foto;
   Position? posicion;
   bool cargando = false;
@@ -28,140 +27,62 @@ class _InicioScreenState extends State<InicioScreen> {
     setState(() => cargando = true);
     try {
       final f = await ImagePicker().pickImage(source: ImageSource.camera, imageQuality: 50);
-      if (f != null) {
-        setState(() => foto = f);
-      }
-
-      if (!await Geolocator.isLocationServiceEnabled()) {
-        throw Exception('GPS desactivado');
-      }
-      var permiso = await Geolocator.checkPermission();
-      if (permiso == LocationPermission.denied) {
-        permiso = await Geolocator.requestPermission();
-      }
-      if (permiso == LocationPermission.denied || permiso == LocationPermission.deniedForever) {
-        throw Exception('Permiso denegado');
-      }
+      if (f != null) setState(() => foto = f);
       final p = await Geolocator.getCurrentPosition();
-      if (mounted) {
-        setState(() => posicion = p);
-      }
+      setState(() => posicion = p);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
-      }
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
-      if (mounted) {
-        setState(() => cargando = false);
-      }
+      setState(() => cargando = false);
     }
   }
 
   Future<void> guardar() async {
-    if (formKey.currentState!.validate()) {
-      if (foto == null || posicion == null) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Por favor, captura foto y ubicación primero')));
-        return;
-      }
+    if (formKey.currentState!.validate() && foto != null && posicion != null) {
       setState(() => cargando = true);
-
-      final reporte = Reporte(
-        titulo: tituloCtrl.text,
-        descripcion: descCtrl.text,
-        categoria: categoria,
-        fotoPath: foto!.path,
-        latitud: posicion!.latitude,
-        longitud: posicion!.longitude,
-        fechaHora: DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now()),
+      final libro = Libro(
+        titulo: tituloCtrl.text, autor: autorCtrl.text, categoria: categoria,
+        portadaPath: foto!.path, latitud: posicion!.latitude, longitud: posicion!.longitude,
+        fechaRegistro: DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now()),
       );
-
-      await DBService.insertar(reporte);
-      await Notificaciones.mostrar(tituloCtrl.text);
-
-      tituloCtrl.clear();
-      descCtrl.clear();
+      await DBService.insertar(libro);
+      await Notificaciones.mostrar(libro.titulo);
       
-      if (mounted) {
-        setState(() {
-          foto = null;
-          posicion = null;
-          cargando = false;
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Reporte guardado con éxito')));
-        Navigator.push(context, MaterialPageRoute(builder: (_) => const ListaScreen()));
-      }
+      tituloCtrl.clear(); autorCtrl.clear();
+      setState(() { foto = null; posicion = null; cargando = false; });
+      if (mounted) Navigator.push(context, MaterialPageRoute(builder: (_) => const ListaScreen()));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Completa todos los campos')));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Reporte Móvil de Incidencias'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.list),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ListaScreen())),
-          )
-        ],
-      ),
+      appBar: AppBar(title: const Text('Registro de Libros'), actions: [
+        IconButton(icon: const Icon(Icons.list), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ListaScreen())))
+      ]),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Form(
           key: formKey,
           child: Column(
             children: [
-              TextFormField(
-                controller: tituloCtrl,
-                decoration: const InputDecoration(labelText: 'Título', border: OutlineInputBorder()),
-                validator: (v) => v!.isEmpty ? 'Ingresa un título' : null,
-              ),
+              TextFormField(controller: tituloCtrl, decoration: const InputDecoration(labelText: 'Título del Libro', border: OutlineInputBorder()), validator: (v) => v!.isEmpty ? 'Requerido' : null),
               const SizedBox(height: 10),
-              TextFormField(
-                controller: descCtrl,
-                decoration: const InputDecoration(labelText: 'Descripción', border: OutlineInputBorder()),
-                maxLines: 3,
-                validator: (v) => v!.isEmpty ? 'Ingresa una descripción' : null,
-              ),
+              TextFormField(controller: autorCtrl, decoration: const InputDecoration(labelText: 'Autor', border: OutlineInputBorder()), validator: (v) => v!.isEmpty ? 'Requerido' : null),
               const SizedBox(height: 10),
               DropdownButtonFormField<String>(
-                initialValue: categoria,
-                decoration: const InputDecoration(labelText: 'Categoría', border: OutlineInputBorder()),
-                items: ['Mantenimiento', 'Limpieza', 'Seguridad', 'Otro']
-                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                    .toList(),
+                initialValue: categoria, decoration: const InputDecoration(labelText: 'Categoría', border: OutlineInputBorder()),
+                items: ['Novela', 'Ciencia', 'Historia', 'Tecnología'].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                 onChanged: (v) => setState(() => categoria = v!),
               ),
               const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: obtenerDatos,
-                      icon: const Icon(Icons.camera_alt),
-                      label: const Text('Capturar Foto y GPS'),
-                    ),
-                  ),
-                ],
-              ),
-              if (foto != null) ...[
-                const SizedBox(height: 10),
-                Image.file(File(foto!.path), height: 150),
-              ],
-              if (posicion != null) ...[
-                const SizedBox(height: 10),
-                Text('Lat: ${posicion!.latitude}, Lon: ${posicion!.longitude}', style: const TextStyle(fontWeight: FontWeight.bold)),
-              ],
+              OutlinedButton.icon(onPressed: obtenerDatos, icon: const Icon(Icons.camera_alt), label: const Text('Portada y Ubicación')),
+              if (foto != null) Image.file(File(foto!.path), height: 150),
+              if (posicion != null) Text('Lat: ${posicion!.latitude}'),
               const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: cargando ? null : guardar,
-                  icon: cargando ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.save),
-                  label: const Text('Guardar Reporte'),
-                ),
-              ),
+              FilledButton(onPressed: cargando ? null : guardar, child: const Text('Guardar Libro')),
             ],
           ),
         ),

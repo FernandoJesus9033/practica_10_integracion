@@ -2,96 +2,67 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import '../models/reporte.dart';
+import '../models/libro.dart';
 import '../services/db_service.dart';
 
 class ListaScreen extends StatefulWidget {
   const ListaScreen({super.key});
-
   @override
   State<ListaScreen> createState() => _ListaScreenState();
 }
 
 class _ListaScreenState extends State<ListaScreen> {
-  late Future<List<Reporte>> _reportesFuture;
+  late Future<List<Libro>> _librosFuture;
   String _tipApi = 'Cargando datos de la API...';
 
   @override
   void initState() {
     super.initState();
-    _reportesFuture = DBService.listar();
+    _librosFuture = DBService.listar();
     _cargarApi();
   }
 
   Future<void> _cargarApi() async {
     try {
-      final r = await http.get(Uri.parse('https://jsonplaceholder.typicode.com/posts/1'));
+      final r = await http.get(Uri.parse('https://jsonplaceholder.typicode.com/posts/2'));
       if (r.statusCode == 200) {
         final data = jsonDecode(r.body);
-        if (mounted) {
-          setState(() => _tipApi = data['title']);
-        }
+        setState(() => _tipApi = data['title']);
       }
     } catch (_) {
-      if (mounted) {
-        setState(() => _tipApi = 'Error al cargar API');
-      }
+      setState(() => _tipApi = 'Error al cargar API');
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Reportes Guardados')),
+      appBar: AppBar(title: const Text('Catálogo de Libros')),
       body: Column(
         children: [
-          // Sección API
           Container(
-            padding: const EdgeInsets.all(16),
-            color: Colors.purple[50],
-            width: double.infinity,
-            child: Text('Tip del día (API):\n$_tipApi'),
+            padding: const EdgeInsets.all(16), color: Colors.blue[50], width: double.infinity,
+            child: Text('Dato Curioso (API):\n$_tipApi', style: const TextStyle(fontStyle: FontStyle.italic)),
           ),
-          const Divider(),
-          
-          // Sección Lista SQLite
           Expanded(
-            child: FutureBuilder<List<Reporte>>(
-              future: _reportesFuture,
+            child: FutureBuilder<List<Libro>>(
+              future: _librosFuture,
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                final reportes = snapshot.data ?? [];
-                if (reportes.isEmpty) return const Center(child: Text('No hay reportes guardados'));
-
+                if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+                final libros = snapshot.data ?? [];
+                if (libros.isEmpty) return const Center(child: Text('No hay libros registrados'));
                 return ListView.builder(
-                  itemCount: reportes.length,
+                  itemCount: libros.length,
                   itemBuilder: (_, i) {
-                    final r = reportes[i];
+                    final l = libros[i];
                     return Card(
                       child: ListTile(
-                        leading: Image.file(File(r.fotoPath), width: 50, height: 50, fit: BoxFit.cover),
-                        title: Text(r.titulo),
-                        subtitle: Text('${r.categoria} | ${r.fechaHora}'),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () async {
-                            await DBService.eliminar(r.id!);
-                            if (mounted) {
-                              setState(() {
-                                _reportesFuture = DBService.listar();
-                              });
-                            }
-                          },
-                        ),
-                        onTap: () => showDialog(
-                          context: context,
-                          builder: (_) => AlertDialog(
-                            title: Text(r.titulo),
-                            content: Text('${r.descripcion}\n\nLat: ${r.latitud}\nLon: ${r.longitud}'),
-                          ),
-                        ),
+                        leading: Image.file(File(l.portadaPath), width: 50, height: 50, fit: BoxFit.cover),
+                        title: Text(l.titulo), subtitle: Text('${l.autor} | ${l.categoria}'),
+                        trailing: IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () async {
+                          await DBService.eliminar(l.id!);
+                          setState(() => _librosFuture = DBService.listar());
+                        }),
                       ),
                     );
                   },
